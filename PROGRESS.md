@@ -1,26 +1,25 @@
-# Provider porting progress
+# Provider debugging and maintenance
 
-## Ported providers (11)
+## Active manifest providers (10)
 
-- `topcinema.js` — custom Vidtube packed-JS decoding is included. External player hosts that CloudStream resolved through its extractor registry may remain embed links.
-- `3isk.js` — multi-stage watch form and packed player decoding are included; external embed hosts can still require the CloudStream extractor registry.
-- `5tv.js` — search, episode lookup, server discovery, unpacking, and media candidate logic are included; host changes or anti-bot blocks can prevent resolving links.
-- `aflaam.js` — search, episode lookup, and direct source extraction are included; only page-exposed source URLs are handled.
-- `aia2tv.js` — server traversal, player unpacking, and direct/HLS URL parsing are included; generic CloudStream extractor hosts are not bundled.
-- `akwam.js` — search, season/episode discovery, download/watch source parsing are included; generic CloudStream extractor hosts are not bundled.
-- `alooytv.js` — changing-domain lookup and video source parsing are included; the source's URL fallback may become stale.
-- `anim3rb.js` — Livewire search and Vid3rb source JSON parsing are included; the Android cookie/WebView challenge solver is not portable, so Cloudflare or other browser challenges can block requests.
-- `anime-phoenix.js` — signed search API, episode discovery, Base64 server decoding, direct links, and Drive URL handling are included; Cloudflare cookies from the Android WebView helper cannot be generated in the standalone provider.
-- `anime4up.js` — episode/server parsing and VnxPlayer HLS parsing are included; Android WebView Cloudflare challenge solving is not portable. Share4max dynamic Inertia source responses may need adjustment if server markup changes.
-- `animerift.js` — the app API/search/episode/source request sequence is represented; the Kotlin source contains literal placeholder JWT, Firebase API key, and Firebase app ID values (`RIFT_*_PLACEHOLDER`), so API calls are not expected to authenticate until real values are supplied.
+- `topcinema.js` — direct `.mp4`/`.m3u8` links are now sorted before embed/player pages. Some site servers still expose only embeds or are blocked by anti-bot pages.
+- `3isk.js` — TMDB title lookup now queries both English and Arabic titles before searching; supports the source site's multistep player flow.
+- `5tv.js` — returns direct media URLs only, so direct links naturally take priority; some third-party servers remain unavailable or challenge requests.
+- `aflaam.js` — search, episode lookup, and direct source extraction; reachability is intermittent in the current runtime.
+- `aia2tv.js` — TMDB lookup now tries English and Arabic titles; server traversal and direct/HLS parsing included.
+- `akwam.js` — switched to `akwam.net`, identified by Akwam's official link hub. The hub warns against lookalike domains; runtime reachability remains environment-dependent.
+- `alooytv.js` — TMDB lookup now tries English and Arabic title variants; changing-domain lookup and video source parsing included.
+- `anim3rb.js` — official/current hostname remains `anime3rb.com`; domain lookup was confirmed from current web results, though this Node runtime reports DNS `ENOTFOUND`.
+- `anime-phoenix.js` — current site is `anime-phoenix.com`; its web interface is active, but its legacy signed API implementation may not match the current site API.
+- `anime4up.js` — TMDB lookup now tries English and Arabic title variants; provider is anime-only, so general Arabic/Turkish series and non-anime movie titles are out of catalog by design.
 
-## Remaining source plugins (33)
+## Removed from manifest
 
-`Animerco`, `Animewitcher`, `Bristege`, `Carateen`, `Cee`, `CimaClub`, `Cimalight`, `Cimatn`, `Egy`, `Egydead`, `Elif`, `Faselhd`, `Krmzy`, `Lodynet`, `MyCimaProvider`, `OscarTv`, `Rate`, `Replaymatch`, `Shahid4u`, `Shahidwbas`, `Syria-live`, `TVgarden`, `TukTukcima`, `TuniflexBlog`, `Tuniflix`, `Viu`, `Wecima`, `Witanime`, `Yacintv`, `Youtube`, `cinemana`, `dima-toon`, and `eseek`.
+- `animerift.js` — omitted because source credentials are literal placeholders and its API returned `403 ACCESS_DENIED`.
 
-## Cross-provider limitations
+## Known limitations
 
-- Nuvio providers return stream descriptors; they do not have CloudStream's `loadExtractor` registry. Embedded hosts are extracted when their pages expose media URLs, otherwise the embed URL may be returned as a stream.
-- The source plugins' Android WebView Cloudflare solvers cannot be run in the standalone JavaScript provider environment.
-- Provider behavior depends on third-party site layouts, host availability, and anti-bot rules and may need maintenance as those sites change.
-- This progress inventory is based on the source repository folder listing; only the eleven listed providers have been ported so far.
+- Search sites may index titles in Arabic, English, or transliteration; trying two TMDB language variants improves matching but cannot guarantee an exact catalog match.
+- Nuvio providers do not include CloudStream's `loadExtractor` registry. Top Cinema falls back to embed pages only when no direct media URL is exposed; 5TV extracts direct media URLs from its server pages.
+- Android WebView Cloudflare solvers in the original Kotlin plugins are not portable to these standalone providers.
+- Live Node fetch tests in this environment currently fail DNS resolution (`ENOTFOUND`) for anime3rb.com and anime-phoenix.com and reset (`ECONNRESET`) on akwam.net. Public web search confirms current public pages/domains, but those runtime failures prevent validating provider stream output here.

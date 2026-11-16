@@ -1,4 +1,5 @@
-const MAIN_URL="https://akwam.ss";
+// Official Akwam link hub identifies akwam.net as a known canonical domain.
+const MAIN_URL="https://akwam.net";
 const UA="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
 const H={"User-Agent":UA,"Accept-Language":"ar,en-US;q=0.8,en;q=0.7",Referer:MAIN_URL};
 const dec=s=>String(s||"").replace(/&amp;/g,"&").replace(/&quot;/g,'"').replace(/&#0?39;|&apos;/g,"'").replace(/&lt;/g,"<").replace(/&gt;/g,">").replace(/&#(\d+);/g,(_,n)=>String.fromCharCode(+n));
@@ -9,7 +10,7 @@ function blocks(html,tag,cls){const re=new RegExp(`<\\/?${tag}\\b[^>]*>`,'gi'),o
 function first(html,tag){return(String(html).match(new RegExp(`<${tag}\\b[^>]*>`,'i'))||[])[0]||""}
 function inner(html,tag){const m=String(html).match(new RegExp(`<${tag}\\b[^>]*>([\\s\\S]*?)<\\/${tag}>`,'i'));return m?m[1]:""}
 async function get(url,opts={}){const r=await fetch(url,{...opts,headers:opts.headers||H,redirect:'follow'});if(!r.ok)throw Error(`HTTP ${r.status}`);return{text:await r.text(),url:r.url||url}}
-async function metadata(id,type){try{const t=type==='movie'?'movie':'series',r=await fetch(`https://v3-cinemeta.strem.io/meta/${t}/${encodeURIComponent(id)}.json`),m=(await r.json()).meta;return[...new Set([m?.name,...(m?.aliases||[]),m?.original_name,m?.original_title].filter(Boolean))]}catch(_){return[]}}
+async function metadata(id,type){try{const t=type==='movie'?'movie':'tv',r=await fetch(`https://www.themoviedb.org/${t}/${encodeURIComponent(id)}?language=en-US`,{redirect:"follow"});if(!r.ok)return[];const h=await r.text(),tag=[...h.matchAll(/<meta\b[^>]*>/gi)].map(x=>x[0]).find(x=>/property=["']og:title["']/i.test(x)),raw=attr(tag,'content')||h.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1]||'',title=dec(raw).replace(/\s*\([^)]*\)\s*(?:—|-).*$/i,'').replace(/\s*[—-]\s*The Movie Database.*$/i,'').trim();return title?[title]:[]}catch(_){return[]}}
 function cards(html,base){return blocks(html,'div','col-lg-auto col-md-4 col-6').flatMap(b=>{const a=first(b,'a[href]')||first(b,'a');const h=abs(attr(a,'href'),base),title=txt(inner(b,'h3'))||attr(a,'title');if(!h||!title)return[];const im=first(b,'img'),poster=abs(attr(im,'data-src')||attr(im,'src'),base);return[{href:h,title,poster}]})}
 async function search(q){const r=await get(`${MAIN_URL}/search?q=${encodeURIComponent(q)}`);return cards(r.text,r.url)}
 function episodeNum(s){const m=[...String(s).matchAll(/\d+/g)];return m.length?+m[m.length-1][0]:null}
@@ -20,4 +21,4 @@ async function getStreams(tmdbId,mediaType,season,episode){try{const qs=await me
 for(const a of [...page.text.matchAll(/<a\b[^>]*>/gi)].map(x=>x[0]).filter(a=>/link-download|\/download\//.test(attr(a,'class')+' '+attr(a,'href')))){try{const u=abs(attr(a,'href'),page.url),dl=await get(u,{headers:{...H,Referer:page.url}});for(const x of [...dl.text.matchAll(/<a\b[^>]*>/gi)].map(x=>x[0]).filter(x=>/downet\.net|\.mp4|link-btn/.test(attr(x,'href')+' '+attr(x,'class')))){const raw=attr(x,'href');if(/^https?:/i.test(raw)&&raw!==u)add(raw,`Akwam (${txt(a).match(/\d+(?:\.\d+)?\s*(?:MB|GB)/i)?.[0]||'Server'})`,u)}}catch(_){}}
 for(const a of [...page.text.matchAll(/<a\b[^>]*>/gi)].map(x=>x[0]).filter(a=>/link-show|\/watch\//.test(attr(a,'class')+' '+attr(a,'href')))){try{const u=abs(attr(a,'href'),page.url),w=await get(u,{headers:{...H,Referer:page.url}});for(const x of w.text.matchAll(/<(?:source|video)\b[^>]*>/gi)){const raw=attr(x[0],'src');if(/^https?:/i.test(raw))add(raw,`Akwam Stream - ${attr(x[0],'size')||attr(x[0],'label')||'720p'}`,u)}}catch(_){}}
 return out}catch(_){return[]}}
-module.exports={getStreams};
+module.exports = { getStreams };

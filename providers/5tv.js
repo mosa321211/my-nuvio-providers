@@ -24,12 +24,12 @@ function block(html, selector) {
   return "";
 }
 async function request(url, options = {}) {
-  const r = await fetch(url, { method: options.method || "GET", headers: options.headers || HEADERS, body: options.body, redirect: "follow" });
+  const r = await fetch(url, { method: options.method || "GET", headers: options.headers || HEADERS, body: options.body, redirect: "follow", signal: options.signal || AbortSignal.timeout(7000) });
   if (!r.ok) throw new Error(`HTTP ${r.status}: ${url}`);
   return { text: await r.text(), url: r.url || url, status: r.status, headers: r.headers };
 }
 async function titles(id, type) {
-  try { const kind = type === "movie" ? "movie" : "series"; const r = await fetch(`https://v3-cinemeta.strem.io/meta/${kind}/${encodeURIComponent(String(id))}.json`); if (!r.ok) return []; const m = (await r.json()).meta; return [...new Set([m?.name, ...(m?.aliases || []), m?.original_name, m?.original_title].filter(x => typeof x === "string" && x.trim()).map(x => x.trim()))]; } catch (_) { return []; }
+  try { const kind = type === "movie" ? "movie" : "tv", r = await fetch(`https://www.themoviedb.org/${kind}/${encodeURIComponent(String(id))}?language=en-US`,{redirect:"follow"}); if (!r.ok) return []; const html = await r.text(), tag = [...html.matchAll(/<meta\b[^>]*>/gi)].map(m => m[0]).find(x => /property=["']og:title["']/i.test(x)), raw = attr(tag, "content") || html.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1] || "", title = dec(raw).replace(/\s*\([^)]*\)\s*(?:—|-).*$/i, "").replace(/\s*[—-]\s*The Movie Database.*$/i, "").trim(); return title ? [title] : []; } catch (_) { return []; }
 }
 function parseCard(article, base) {
   const titleText = block(article, ".ftv-home-poster-card__title") || block(article, ".ftv-home-episode-card__title");
@@ -135,15 +135,15 @@ async function extract(pageUrl) {
     const u = abs(attr(m[0], "href"), page.url);
     if (u && !seen.has(u)) { targets.push({ name: "Download", url: u, download: true }); seen.add(u); }
   }
-  const output = [];
-  for (const target of targets) {
+  const results = await Promise.all(targets.slice(0, 12).map(async target => {
+    const output = [];
     for (const url of await inspectTarget(target.url, page.url, target.download)) {
       const headers = await probe(url, origin(target.url) + "/");
-      if (!headers) continue;
-      output.push({ name: "5TV", title: `[5TV] ${target.name}`, url, quality: "1080p", language: "ar", headers });
+      if (headers) output.push({ name: "5TV", title: `[5TV] ${target.name}`, url, quality: "1080p", language: "ar", headers });
     }
-  }
-  return output;
+    return output;
+  }));
+  return results.flat();
 }
 
 async function getStreams(tmdbId, mediaType, season, episode) {

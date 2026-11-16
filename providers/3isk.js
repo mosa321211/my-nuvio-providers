@@ -38,15 +38,7 @@ async function request(url, options = {}) {
   if (!response.ok) throw new Error(`HTTP ${response.status}: ${url}`);
   return { text: await response.text(), url: response.url || url };
 }
-async function titleNames(id, type) {
-  try {
-    const kind = type === "movie" ? "movie" : "series";
-    const r = await fetch(`https://v3-cinemeta.strem.io/meta/${kind}/${encodeURIComponent(String(id))}.json`);
-    if (!r.ok) return [];
-    const m = (await r.json()).meta;
-    return [...new Set([m?.name, ...(m?.aliases || []), m?.original_name, m?.original_title].filter(x => typeof x === "string" && x.trim()).map(x => x.trim()))];
-  } catch (_) { return []; }
-}
+async function titleNames(id,type){const kind=type==='movie'?'movie':'tv',out=[];for(const lang of ['en-US','ar-SA']){try{const r=await fetch(`https://www.themoviedb.org/${kind}/${encodeURIComponent(String(id))}?language=${lang}`,{redirect:'follow'});if(!r.ok)continue;const h=await r.text(),tag=[...h.matchAll(/<meta\b[^>]*>/gi)].map(x=>x[0]).find(x=>/property=["']og:title["']/i.test(x)),raw=attr(tag,'content')||h.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1]||'',title=dec(raw).replace(/\s*\([^)]*\)\s*(?:—|-).*$/i,'').replace(/\s*[—-]\s*The Movie Database.*$/i,'').trim();if(title&&!out.some(x=>x.toLowerCase()===title.toLowerCase()))out.push(title)}catch(_){}}return out}
 function searchCards(html, base) {
   const re = /<a\b[^>]*>/gi, list = []; let m;
   while ((m = re.exec(html))) {

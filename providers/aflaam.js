@@ -6,7 +6,7 @@ function textOf(html = "") { return dec(String(html).replace(/<[^>]+>/g, " ").re
 function abs(url, base = MAIN_URL) { try { return new URL(dec(String(url || "").trim()), base).href; } catch (_) { return ""; } }
 async function request(url) { const r = await fetch(url, { headers: HEADERS, redirect: "follow" }); if (!r.ok) throw new Error(`HTTP ${r.status}`); return { text: await r.text(), url: r.url || url }; }
 async function names(id, type) {
-  try { const kind = type === "movie" ? "movie" : "series"; const r = await fetch(`https://v3-cinemeta.strem.io/meta/${kind}/${encodeURIComponent(String(id))}.json`); if (!r.ok) return []; const m = (await r.json()).meta; return [...new Set([m?.name, ...(m?.aliases || []), m?.original_name, m?.original_title].filter(x => typeof x === "string" && x.trim()).map(x => x.trim()))]; } catch (_) { return []; }
+  try { const kind = type === "movie" ? "movie" : "tv", r = await fetch(`https://www.themoviedb.org/${kind}/${encodeURIComponent(String(id))}?language=en-US`,{redirect:"follow"}); if (!r.ok) return []; const html = await r.text(), tag = [...html.matchAll(/<meta\b[^>]*>/gi)].map(m => m[0]).find(x => /property=["']og:title["']/i.test(x)), raw = attr(tag, "content") || html.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1] || "", title = dec(raw).replace(/\s*\([^)]*\)\s*(?:—|-).*$/i, "").replace(/\s*[—-]\s*The Movie Database.*$/i, "").trim(); return title ? [title] : []; } catch (_) { return []; }
 }
 function itemBlocks(html) { return [...String(html).matchAll(/<div\b[^>]*class=["'][^"']*\bitem\b[^"']*["'][^>]*>[\s\S]*?<\/div>\s*<\/div>?/gi)].map(m => m[0]); }
 function cards(html, base) {

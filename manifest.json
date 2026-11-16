@@ -1,18 +1,18 @@
 {
   "name": "3arabi Nuvio Providers",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "scrapers": [
     {
       "id": "topcinema",
       "name": "Top Cinema",
       "description": "Arabic movies and series from Top Cinema, including episode discovery and Vidtube stream extraction.",
-      "version": "0.1.0",
+      "version": "0.1.1",
       "author": "mosa321211",
       "supportedTypes": [
         "movie",
         "tv"
       ],
-      "filename": "https://raw.githubusercontent.com/mosa321211/my-nuvio-providers/refs/heads/main/providers/topcinema.js",
+      "filename": "providers/topcinema.js",
       "enabled": true,
       "contentLanguage": [
         "ar"
@@ -29,13 +29,13 @@
       "id": "3isk",
       "name": "3isk",
       "description": "Arabic and Turkish series and movies from 3esk.onl, including episode pages, two-stage watch form submission, numbered embed probing, and packed player script decoding.",
-      "version": "0.1.0",
+      "version": "0.1.1",
       "author": "mosa321211",
       "supportedTypes": [
         "movie",
         "tv"
       ],
-      "filename": "https://raw.githubusercontent.com/mosa321211/my-nuvio-providers/refs/heads/main/providers/3isk.js",
+      "filename": "providers/3isk.js",
       "enabled": true,
       "contentLanguage": [
         "ar"
@@ -54,13 +54,13 @@
       "id": "5tv",
       "name": "5TV",
       "description": "Arabic movies and series from 5TV, including episode selection, watch/download server discovery, Dean Edwards unpacking, and candidate media validation.",
-      "version": "0.1.0",
+      "version": "0.1.1",
       "author": "mosa321211",
       "supportedTypes": [
         "movie",
         "tv"
       ],
-      "filename": "https://raw.githubusercontent.com/mosa321211/my-nuvio-providers/refs/heads/main/providers/5tv.js",
+      "filename": "providers/5tv.js",
       "enabled": true,
       "contentLanguage": [
         "ar"
@@ -78,13 +78,13 @@
       "id": "aflaam",
       "name": "Aflaam",
       "description": "Arabic, foreign, and Indian films and series from aflaam.com with episode selection and direct video source extraction.",
-      "version": "0.1.0",
+      "version": "0.1.1",
       "author": "mosa321211",
       "supportedTypes": [
         "movie",
         "tv"
       ],
-      "filename": "https://raw.githubusercontent.com/mosa321211/my-nuvio-providers/refs/heads/main/providers/aflaam.js",
+      "filename": "providers/aflaam.js",
       "enabled": true,
       "contentLanguage": [
         "ar"
@@ -101,13 +101,13 @@
       "id": "aia2tv",
       "name": "Asia2TV 2",
       "description": "Asian dramas and movies from Asia2TV with episode discovery, server traversal, packed player decoding, and direct/HLS extraction.",
-      "version": "0.1.0",
+      "version": "0.1.1",
       "author": "mosa321211",
       "supportedTypes": [
         "movie",
         "tv"
       ],
-      "filename": "https://raw.githubusercontent.com/mosa321211/my-nuvio-providers/refs/heads/main/providers/aia2tv.js",
+      "filename": "providers/aia2tv.js",
       "enabled": true,
       "contentLanguage": [
         "ar"
@@ -125,13 +125,13 @@
       "id": "akwam",
       "name": "Akwam",
       "description": "Arabic movies and series from Akwam with season and episode selection, direct download links, and watch source extraction.",
-      "version": "0.1.0",
+      "version": "0.1.1",
       "author": "mosa321211",
       "supportedTypes": [
         "movie",
         "tv"
       ],
-      "filename": "https://raw.githubusercontent.com/mosa321211/my-nuvio-providers/refs/heads/main/providers/akwam.js",
+      "filename": "providers/akwam.js",
       "enabled": true,
       "contentLanguage": [
         "ar"
@@ -148,13 +148,13 @@
       "id": "alooytv",
       "name": "AlooyTv",
       "description": "Arabic and Turkish series from AlooyTV with changing-domain resolution, episode selection, and direct source extraction.",
-      "version": "0.1.0",
+      "version": "0.1.1",
       "author": "mosa321211",
       "supportedTypes": [
         "movie",
         "tv"
       ],
-      "filename": "https://raw.githubusercontent.com/mosa321211/my-nuvio-providers/refs/heads/main/providers/alooytv.js",
+      "filename": "providers/alooytv.js",
       "enabled": true,
       "contentLanguage": [
         "ar"
@@ -171,13 +171,13 @@
       "id": "anim3rb",
       "name": "Anime3rb",
       "description": "Arabic anime from Anime3rb with Livewire search, episode discovery, Vid3rb player parsing, and non-premium source extraction.",
-      "version": "0.1.0",
+      "version": "0.1.1",
       "author": "mosa321211",
       "supportedTypes": [
         "movie",
         "tv"
       ],
-      "filename": "https://raw.githubusercontent.com/mosa321211/my-nuvio-providers/refs/heads/main/providers/anim3rb.js",
+      "filename": "providers/anim3rb.js",
       "enabled": true,
       "contentLanguage": [
         "ar"
@@ -194,13 +194,13 @@
       "id": "anime-phoenix",
       "name": "Anime Phoenix",
       "description": "Anime and anime movies from Anime Phoenix with signed API search, episode discovery, base64 server decoding, direct links, and Google Drive handling.",
-      "version": "0.1.0",
+      "version": "0.1.1",
       "author": "mosa321211",
       "supportedTypes": [
         "movie",
         "tv"
       ],
-      "filename": "https://raw.githubusercontent.com/mosa321211/my-nuvio-providers/refs/heads/main/providers/anime-phoenix.js",
+      "filename": "providers/anime-phoenix.js",
       "enabled": true,
       "contentLanguage": [
         "ar"
@@ -217,13 +217,13 @@
       "id": "anime4up",
       "name": "Anime4Up",
       "description": "Anime from Anime4Up with Cloudflare retry support, episode servers, Share4max mirrors, VnxPlayer HLS parsing, and subtitles.",
-      "version": "0.1.0",
+      "version": "0.1.1",
       "author": "mosa321211",
       "supportedTypes": [
         "movie",
         "tv"
       ],
-      "filename": "https://raw.githubusercontent.com/mosa321211/my-nuvio-providers/refs/heads/main/providers/anime4up.js",
+      "filename": "providers/anime4up.js",
       "enabled": true,
       "contentLanguage": [
         "ar"
@@ -234,28 +234,6 @@
         "vtt"
       ],
       "limited": false,
-      "disabledPlatforms": [],
-      "supportsExternalPlayer": false
-    },
-    {
-      "id": "animerift",
-      "name": "AnimeRift",
-      "description": "AnimeRift app API provider port with anime search, episode/source lookup, quality selection, direct media links, and Streamtape tickets.",
-      "version": "0.1.0",
-      "author": "mosa321211",
-      "supportedTypes": [
-        "tv"
-      ],
-      "filename": "https://raw.githubusercontent.com/mosa321211/my-nuvio-providers/refs/heads/main/providers/animerift.js",
-      "enabled": true,
-      "contentLanguage": [
-        "ar"
-      ],
-      "formats": [
-        "mp4",
-        "m3u8"
-      ],
-      "limited": true,
       "disabledPlatforms": [],
       "supportsExternalPlayer": false
     }

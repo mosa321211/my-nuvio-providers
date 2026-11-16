@@ -1,4 +1,4 @@
-const MAIN_URL = "https://web8.topcinema.cam";
+const MAIN_URL = "https://www.topcinema.cam";
 const UA = "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Mobile Safari/537.36";
 const HEADERS = {
   "User-Agent": UA,
@@ -77,13 +77,15 @@ function cards(html, base) {
 }
 
 async function metadataTitles(tmdbId, mediaType) {
-  const type = mediaType === "movie" ? "movie" : "series";
+  const type = mediaType === "movie" ? "movie" : "tv";
   try {
-    const r = await fetch(`https://v3-cinemeta.strem.io/meta/${type}/${encodeURIComponent(String(tmdbId))}.json`, { redirect: "follow" });
+    const r = await fetch(`https://www.themoviedb.org/${type}/${encodeURIComponent(String(tmdbId))}?language=en-US`,{redirect:"follow"});
     if (!r.ok) return [];
-    const meta = (await r.json()).meta;
-    if (!meta) return [];
-    return [...new Set([meta.name, ...(meta.aliases || []), meta.original_name, meta.original_title].filter((x) => typeof x === "string" && x.trim()).map((x) => x.trim()))];
+    const html = await r.text();
+    const tag = [...html.matchAll(/<meta\b[^>]*>/gi)].map((m) => m[0]).find((x) => /property=["']og:title["']/i.test(x));
+    const raw = attr(tag, "content") || html.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1] || "";
+    const title = decodeHtml(raw).replace(/\s*\([^)]*\)\s*(?:—|-).*$/i, "").replace(/\s*[—-]\s*The Movie Database.*$/i, "").trim();
+    return title ? [title] : [];
   } catch (_) { return []; }
 }
 
@@ -105,7 +107,10 @@ async function episodeUrl(seriesUrl, wantedSeason, wantedEpisode) {
     for (const row of classBlocks(html, "div", "row")) {
       for (const a of row.matchAll(/<a\b[^>]*>/gi)) {
         const href = absolute(attr(a[0], "href"), base);
-        const n = num(row.match(/الحلقة\s*\d+/)?.[0]);
+        const close = row.indexOf("</a>", a.index);
+        const anchorHtml = close >= 0 ? row.slice(a.index, close + 4) : a[0];
+        const label = `${attr(a[0], "title")} ${textOf(anchorHtml)}`;
+        const n = Number(label.match(/الحلقة\D*(\d+)/i)?.[1] || label.match(/episode\D*(\d+)/i)?.[1] || label.match(/\b(\d+)\b/)?.[1]) || null;
         if (href && n != null) found.push({ href, season: seasonNo, episode: n, poster: seasonPoster || absolute(attr(firstTag(row, "img"), "src"), base) });
       }
     }
@@ -305,7 +310,9 @@ async function getStreams(tmdbId, mediaType, season, episode) {
         }
       }
     }
-    return output;
+    // Nuvio can play direct media most reliably; put those ahead of host pages.
+    const isDirect = (s) => /\.(?:m3u8|mp4)(?:[?#]|$)/i.test(s.url);
+    return output.sort((a, b) => Number(isDirect(b)) - Number(isDirect(a)));
   } catch (_) { return []; }
 }
 
