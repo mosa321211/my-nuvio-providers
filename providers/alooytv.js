@@ -1,0 +1,14 @@
+const START_URL="https://fitnur.com/alooytv";let base="https://h.alooytv16.com";
+const UA="Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36";
+const dec=s=>String(s||"").replace(/&amp;/g,"&").replace(/&quot;/g,'"').replace(/&#0?39;|&apos;/g,"'").replace(/&lt;/g,"<").replace(/&gt;/g,">");
+function attr(t,n){const m=String(t||"").match(new RegExp(`\\b${n}\\s*=\\s*(?:"([^"]*)"|'([^']*)'|([^\\s>]+))`,'i'));return dec(m&&(m[1]||m[2]||m[3])||"")}
+function tx(s=""){return dec(String(s).replace(/<[^>]+>/g," ").replace(/\s+/g," ")).trim()}
+function abs(u,b=base){try{return new URL(dec(u),b).href}catch(_){return""}}
+async function get(url,opts={}){const r=await fetch(url,{...opts,headers:{"User-Agent":UA,"Accept-Language":"ar,en-US;q=0.9,en;q=0.8",...(opts.headers||{})},redirect:'follow'});if(!r.ok)throw Error(r.status);return{text:await r.text(),url:r.url||url}}
+async function domain(){try{const r=await get(START_URL),a=[...r.text.matchAll(/<a\b[^>]*>/gi)].map(x=>attr(x[0],'href')).find(x=>/^https?:/i.test(x)&&/alooytv/i.test(x)&&!/t\.me|instagram/i.test(x));if(a)base=new URL(a).origin}catch(_){}return base}
+async function titles(id,type){try{let r=await fetch(`https://v3-cinemeta.strem.io/meta/${type==='movie'?'movie':'series'}/${encodeURIComponent(id)}.json`);let m=(await r.json()).meta;return[...new Set([m?.name,...(m?.aliases||[]),m?.original_name,m?.original_title].filter(Boolean))]}catch(_){return[]}}
+function cards(html,b){return[...html.matchAll(/<div\b[^>]*class=["'][^"']*movie-container[^"']*["'][\s\S]*?<\/div>/gi)].flatMap(x=>[...x[0].matchAll(/<a\b[^>]*>/gi)].flatMap(a=>{const h=abs(attr(a[0],'href'),b);if(!h)return[];return[{href:h,title:attr(a[0],'title')||tx(a[0]),poster:abs(attr((x[0].match(/<img\b[^>]*>/i)||[])[0],'data-src')||attr((x[0].match(/<img\b[^>]*>/i)||[])[0],'src'),b)}]}))}
+async function search(q){const b=await domain(),r=await get(`${b}/search?q=${encodeURIComponent(q)}`);return cards(r.text,b)}
+function make(url,title,ref){return{name:'AlooyTv',title,url,quality:'HD',language:'ar',headers:{'User-Agent':UA,Referer:ref||base+'/'} }}
+async function getStreams(id,type,season,episode){try{const ts=await titles(id,type);let items=[];for(const q of ts){items=await search(q);if(items.length)break}if(!items.length)return[];let item=items[0],page=await get(item.href),html=page.text;let target=item.href;if(type!=='movie'){const eps=[...html.matchAll(/<a\b[^>]*class=["'][^"']*btn-ep[^"']*["'][^>]*>[\s\S]*?<\/a>/gi)].map(x=>({h:abs(attr(x[0].match(/<a\b[^>]*>/i)?.[0],'href'),page.url),n:+(tx(x[0]).match(/\d+/)||[])[0]}));target=eps.find(x=>x.n===+(episode||1))?.h||target;page=await get(target)}const out=[];for(const m of page.text.matchAll(/<source\b[^>]*>/gi)){const u=abs(attr(m[0],'src'),page.url);if(u)out.push(make(u,'AlooyTv Server',base+'/'))}return out}catch(_){return[]}}
+module.exports={getStreams};
