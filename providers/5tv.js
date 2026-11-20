@@ -1,6 +1,6 @@
 const MAIN_URL = "https://new61.5tv.lol";
 const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36";
-const HEADERS = { "User-Agent": UA, Referer: `${MAIN_URL}/` };
+const HEADERS = { "User-Agent": UA, "Accept-Language": "ar,en-US;q=0.9,en;q=0.8", Referer: `${MAIN_URL}/` };
 
 function dec(s = "") { return String(s).replace(/&amp;/g, "&").replace(/&quot;/g, '"').replace(/&#0?39;|&apos;/g, "'").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/\\"/g, '"').replace(/\\'/g, "'"); }
 function attr(tag, key) { const m = String(tag || "").match(new RegExp(`\\b${key}\\s*=\\s*(?:"([^"]*)"|'([^']*)'|([^\\s>]+))`, "i")); return dec(m ? m[1] || m[2] || m[3] || "" : ""); }
@@ -24,13 +24,26 @@ function block(html, selector) {
   return "";
 }
 async function request(url, options = {}) {
-  const r = await fetch(url, { method: options.method || "GET", headers: options.headers || HEADERS, body: options.body, redirect: "follow", signal: options.signal || AbortSignal.timeout(7000) });
+  const r = await fetch(url, { method: options.method || "GET", headers: { ...HEADERS, ...(options.headers || {}) }, body: options.body, redirect: "follow" });
   if (!r.ok) throw new Error(`HTTP ${r.status}: ${url}`);
   return { text: await r.text(), url: r.url || url, status: r.status, headers: r.headers };
 }
-async function titles(id, type) {
-  try { const kind = type === "movie" ? "movie" : "tv", r = await fetch(`https://www.themoviedb.org/${kind}/${encodeURIComponent(String(id))}?language=en-US`,{redirect:"follow"}); if (!r.ok) return []; const html = await r.text(), tag = [...html.matchAll(/<meta\b[^>]*>/gi)].map(m => m[0]).find(x => /property=["']og:title["']/i.test(x)), raw = attr(tag, "content") || html.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1] || "", title = dec(raw).replace(/\s*\([^)]*\)\s*(?:—|-).*$/i, "").replace(/\s*[—-]\s*The Movie Database.*$/i, "").trim(); return title ? [title] : []; } catch (_) { return []; }
+async function titles(id, type){
+  const kind = type === "movie" ? "movie" : "tv", names = [];
+  for (const language of ["en-US", "ar-SA"]) {
+    try {
+      const response = await fetch(`https://www.themoviedb.org/${kind}/${encodeURIComponent(String(id))}?language=${language}`, { redirect: "follow" });
+      if (!response.ok) continue;
+      const html = await response.text();
+      const meta = [...html.matchAll(/<meta\b[^>]*>/gi)].map((match) => match[0]).find((tag) => /property=["']og:title["']/i.test(tag));
+      const raw = attr(meta, "content") || html.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1] || "";
+      const title = dec(raw).replace(/\s*\([^)]*\)\s*(?:—|-).*$/i, "").replace(/\s*[—-]\s*The Movie Database.*$/i, "").trim();
+      if (title && !names.some((name) => name.toLowerCase() === title.toLowerCase())) names.push(title);
+    } catch (_) { /* try the other TMDB localization */ }
+  }
+  return names;
 }
+
 function parseCard(article, base) {
   const titleText = block(article, ".ftv-home-poster-card__title") || block(article, ".ftv-home-episode-card__title");
   let linkTag = tag(article, ".ftv-home-poster-card__image") || tag(article, ".ftv-home-episode-card__title");
@@ -139,20 +152,36 @@ async function extract(pageUrl) {
     const output = [];
     for (const url of await inspectTarget(target.url, page.url, target.download)) {
       const headers = await probe(url, origin(target.url) + "/");
-      if (headers) output.push({ name: "5TV", title: `[5TV] ${target.name}`, url, quality: "1080p", language: "ar", headers });
+      if (headers && /\.(?:mp4|m3u8|mkv|webm|mov)(?:[?#]|$)/i.test(url)) {
+        const quality = /(?:2160|4k)/i.test(url) ? "4K" : /1080/i.test(url) ? "1080p" : /720/i.test(url) ? "720p" : "HD";
+        output.push({ name: "5TV", title: `[5TV] ${target.name}`, url, quality, language: "ar", headers: { ...HEADERS, ...headers } });
+      }
     }
     return output;
   }));
   return results.flat();
 }
 
+function normalizeTitle(value) { return String(value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[\u064B-\u065F\u0670]/g, "").toLowerCase().replace(/[^a-z0-9\u0600-\u06ff]+/g, " ").trim(); }
+function titleScore(candidate, query) {
+  const a = normalizeTitle(candidate), b = normalizeTitle(query);
+  if (!a || !b) return 0;
+  if (a === b) return 100;
+  if (a.includes(b) || b.includes(a)) return 80;
+  const aa = [...new Set(a.split(/\s+/).filter(Boolean))], bb = [...new Set(b.split(/\s+/).filter(Boolean))];
+  const common = aa.filter((token) => bb.includes(token)).length;
+  return common ? 50 * common / Math.max(aa.length, bb.length) : 0;
+}
+function bestTitleMatch(items, query, titleOf) { return [...items].sort((a, b) => titleScore(titleOf(b), query) - titleScore(titleOf(a), query))[0] || null; }
+
 async function getStreams(tmdbId, mediaType, season, episode) {
   try {
     const movie = mediaType === "movie";
     const names = await titles(tmdbId, mediaType);
-    let cards = [];
-    for (const title of names) { cards = await search(title); if (cards.length) break; }
-    const selected = cards.find(x => x.movie === movie) || cards[0];
+    let cards = [], searchedTitle = "";
+    for (const title of names) { const rows = await search(title); if (rows.length) { cards = rows; searchedTitle = title; break; } }
+    const typed = cards.filter((x) => x.movie === movie);
+    const selected = bestTitleMatch(typed.length ? typed : cards, searchedTitle, (x) => x.title);
     if (!selected) return [];
     let target = selected.href;
     if (!movie) {

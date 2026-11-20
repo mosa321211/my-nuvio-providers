@@ -158,13 +158,26 @@ async function discoverEpisodeStreams(itemUrl) {
   return [...streams].map(url => ({ name: "3isk", title: `3isk • ${url.match(/\.(m3u8|mp4|webm|mov)/i)?.[1]?.toUpperCase() || "Video"}`, url, quality: "HD", language: "ar", headers: { ...HEADERS, Referer: origin(url) + "/" } }));
 }
 
+function normalizeTitle(value) { return String(value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[\u064B-\u065F\u0670]/g, "").toLowerCase().replace(/[^a-z0-9\u0600-\u06ff]+/g, " ").trim(); }
+function titleScore(candidate, query) {
+  const a = normalizeTitle(candidate), b = normalizeTitle(query);
+  if (!a || !b) return 0;
+  if (a === b) return 100;
+  if (a.includes(b) || b.includes(a)) return 80;
+  const aa = [...new Set(a.split(/\s+/).filter(Boolean))], bb = [...new Set(b.split(/\s+/).filter(Boolean))];
+  const common = aa.filter((token) => bb.includes(token)).length;
+  return common ? 50 * common / Math.max(aa.length, bb.length) : 0;
+}
+function bestTitleMatch(items, query, titleOf) { return [...items].sort((a, b) => titleScore(titleOf(b), query) - titleScore(titleOf(a), query))[0] || null; }
+
 async function getStreams(tmdbId, mediaType, season, episode) {
   try {
     const names = await titleNames(tmdbId, mediaType);
-    let results = [];
-    for (const name of names) { results = await search(name); if (results.length) break; }
+    let results = [], searchedTitle = "";
+    for (const name of names) { const rows = await search(name); if (rows.length) { results = rows; searchedTitle = name; break; } }
     const type = mediaType === "movie" ? "movie" : "tv";
-    const card = results.find(x => type === "movie" ? x.type === "movie" : x.type === "tv") || results.find(x => x.type === "episode");
+    const typed = results.filter((x) => type === "movie" ? x.type === "movie" : x.type === "tv");
+    const card = bestTitleMatch(typed.length ? typed : results.filter((x) => x.type === "episode"), searchedTitle, (x) => x.title);
     if (!card) return [];
     const target = card.type === "tv" ? await getItemUrl(card, season, episode) : card.href;
     if (!target) return [];

@@ -76,17 +76,20 @@ function cards(html, base) {
   });
 }
 
-async function metadataTitles(tmdbId, mediaType) {
-  const type = mediaType === "movie" ? "movie" : "tv";
-  try {
-    const r = await fetch(`https://www.themoviedb.org/${type}/${encodeURIComponent(String(tmdbId))}?language=en-US`,{redirect:"follow"});
-    if (!r.ok) return [];
-    const html = await r.text();
-    const tag = [...html.matchAll(/<meta\b[^>]*>/gi)].map((m) => m[0]).find((x) => /property=["']og:title["']/i.test(x));
-    const raw = attr(tag, "content") || html.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1] || "";
-    const title = decodeHtml(raw).replace(/\s*\([^)]*\)\s*(?:—|-).*$/i, "").replace(/\s*[—-]\s*The Movie Database.*$/i, "").trim();
-    return title ? [title] : [];
-  } catch (_) { return []; }
+async function metadataTitles(id, type){
+  const kind = type === "movie" ? "movie" : "tv", names = [];
+  for (const language of ["en-US", "ar-SA"]) {
+    try {
+      const response = await fetch(`https://www.themoviedb.org/${kind}/${encodeURIComponent(String(id))}?language=${language}`, { redirect: "follow" });
+      if (!response.ok) continue;
+      const html = await response.text();
+      const meta = [...html.matchAll(/<meta\b[^>]*>/gi)].map((match) => match[0]).find((tag) => /property=["']og:title["']/i.test(tag));
+      const raw = attr(meta, "content") || html.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1] || "";
+      const title = decodeHtml(raw).replace(/\s*\([^)]*\)\s*(?:—|-).*$/i, "").replace(/\s*[—-]\s*The Movie Database.*$/i, "").trim();
+      if (title && !names.some((name) => name.toLowerCase() === title.toLowerCase())) names.push(title);
+    } catch (_) { /* try the other TMDB localization */ }
+  }
+  return names;
 }
 
 async function search(title) {
@@ -198,7 +201,7 @@ async function extractVidtube(url, referer) {
         const dl = await request(download, { headers: { ...HEADERS, Referer: url } });
         const link = [...dl.text.matchAll(/<a\b[^>]*>/gi)].map((m) => m[0]).find((x) => /btn-primary|download|\.mp4|\.m3u8/i.test(attr(x, "class") + " " + attr(x, "href")));
         const direct = link ? absolute(attr(link, "href"), dl.url) : dl.url;
-        if (direct) streams.push(makeStream(cleanUrl(direct), `Vidtube - ${label}`, host + "/", quality(label)));
+        if (direct && /\.(?:m3u8|mp4)(?:[?#]|$)/i.test(direct)) streams.push(makeStream(cleanUrl(direct), `Vidtube - ${label}`, host + "/", quality(label)));
       } catch (_) { /* retain other quality links */ }
     }
     return streams;
@@ -222,7 +225,7 @@ async function resolveEmbed(url, referer, depth = 0) {
 
   let page;
   try { page = await request(url, { headers: { ...HEADERS, Referer: referer || origin(url) + "/" } }); }
-  catch (_) { return [makeStream(url, `Top Cinema - ${new URL(url).hostname}`, referer)]; }
+  catch (_) { return []; }
 
   const html = unpackVidtube(page.text) || page.text;
   const media = [];
@@ -240,7 +243,7 @@ async function resolveEmbed(url, referer, depth = 0) {
     }
   }
   // The CloudStream loadExtractor host library is not available in Nuvio's standalone file.
-  return [makeStream(url, `Top Cinema - ${new URL(url).hostname}`, referer)];
+  return [];
 }
 
 async function discover(pageUrl) {
@@ -278,19 +281,31 @@ async function discover(pageUrl) {
   return links;
 }
 
+function normalizeTitle(value) { return String(value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[\u064B-\u065F\u0670]/g, "").toLowerCase().replace(/[^a-z0-9\u0600-\u06ff]+/g, " ").trim(); }
+function titleScore(candidate, query) {
+  const a = normalizeTitle(candidate), b = normalizeTitle(query);
+  if (!a || !b) return 0;
+  if (a === b) return 100;
+  if (a.includes(b) || b.includes(a)) return 80;
+  const aa = [...new Set(a.split(/\s+/).filter(Boolean))], bb = [...new Set(b.split(/\s+/).filter(Boolean))];
+  const common = aa.filter((token) => bb.includes(token)).length;
+  return common ? 50 * common / Math.max(aa.length, bb.length) : 0;
+}
+function bestTitleMatch(items, query, titleOf) { return [...items].sort((a, b) => titleScore(titleOf(b), query) - titleScore(titleOf(a), query))[0] || null; }
+
 async function getStreams(tmdbId, mediaType, season, episode) {
   try {
     const movie = mediaType === "movie";
     const titles = await metadataTitles(tmdbId, mediaType);
     if (!titles.length) return [];
 
-    let found = [];
+    let found = [], searchedTitle = "";
     for (const title of titles) {
-      found = await search(title);
-      if (found.length) break;
+      const rows = await search(title);
+      if (rows.length) { found = rows; searchedTitle = title; break; }
     }
     const candidates = found.filter((x) => movie ? !x.isSeries : x.isSeries);
-    const selected = candidates[0] || found[0];
+    const selected = bestTitleMatch(candidates.length ? candidates : found, searchedTitle, (x) => x.title);
     if (!selected) return [];
 
     const itemUrl = movie ? selected.href : await episodeUrl(selected.href, season || 1, episode || 1);
@@ -306,7 +321,7 @@ async function getStreams(tmdbId, mediaType, season, episode) {
       for (const [url, ref] of links) {
         const streams = await resolveEmbed(unwrapPlay(url), ref);
         for (const item of streams) {
-          if (item.url && !seen.has(item.url)) { seen.add(item.url); output.push(item); }
+          if (item.url && /\.(?:m3u8|mp4)(?:[?#]|$)/i.test(item.url) && !seen.has(item.url)) { seen.add(item.url); output.push(item); }
         }
       }
     }

@@ -5,9 +5,22 @@ function attr(tag, key) { const m = String(tag || "").match(new RegExp(`\\b${key
 function textOf(html = "") { return dec(String(html).replace(/<[^>]+>/g, " ").replace(/\s+/g, " ")).trim(); }
 function abs(url, base = MAIN_URL) { try { return new URL(dec(String(url || "").trim()), base).href; } catch (_) { return ""; } }
 async function request(url) { const r = await fetch(url, { headers: HEADERS, redirect: "follow" }); if (!r.ok) throw new Error(`HTTP ${r.status}`); return { text: await r.text(), url: r.url || url }; }
-async function names(id, type) {
-  try { const kind = type === "movie" ? "movie" : "tv", r = await fetch(`https://www.themoviedb.org/${kind}/${encodeURIComponent(String(id))}?language=en-US`,{redirect:"follow"}); if (!r.ok) return []; const html = await r.text(), tag = [...html.matchAll(/<meta\b[^>]*>/gi)].map(m => m[0]).find(x => /property=["']og:title["']/i.test(x)), raw = attr(tag, "content") || html.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1] || "", title = dec(raw).replace(/\s*\([^)]*\)\s*(?:—|-).*$/i, "").replace(/\s*[—-]\s*The Movie Database.*$/i, "").trim(); return title ? [title] : []; } catch (_) { return []; }
+async function names(id, type){
+  const kind = type === "movie" ? "movie" : "tv", names = [];
+  for (const language of ["en-US", "ar-SA"]) {
+    try {
+      const response = await fetch(`https://www.themoviedb.org/${kind}/${encodeURIComponent(String(id))}?language=${language}`, { redirect: "follow" });
+      if (!response.ok) continue;
+      const html = await response.text();
+      const meta = [...html.matchAll(/<meta\b[^>]*>/gi)].map((match) => match[0]).find((tag) => /property=["']og:title["']/i.test(tag));
+      const raw = attr(meta, "content") || html.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1] || "";
+      const title = dec(raw).replace(/\s*\([^)]*\)\s*(?:—|-).*$/i, "").replace(/\s*[—-]\s*The Movie Database.*$/i, "").trim();
+      if (title && !names.some((name) => name.toLowerCase() === title.toLowerCase())) names.push(title);
+    } catch (_) { /* try the other TMDB localization */ }
+  }
+  return names;
 }
+
 function itemBlocks(html) { return [...String(html).matchAll(/<div\b[^>]*class=["'][^"']*\bitem\b[^"']*["'][^>]*>[\s\S]*?<\/div>\s*<\/div>?/gi)].map(m => m[0]); }
 function cards(html, base) {
   const results = [];
@@ -58,12 +71,25 @@ async function seriesEpisode(seriesUrl, episode) {
   }
   return entries.reverse().find(x => x.ep === Number(episode || 1))?.href || "";
 }
+function normalizeTitle(value) { return String(value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[\u064B-\u065F\u0670]/g, "").toLowerCase().replace(/[^a-z0-9\u0600-\u06ff]+/g, " ").trim(); }
+function titleScore(candidate, query) {
+  const a = normalizeTitle(candidate), b = normalizeTitle(query);
+  if (!a || !b) return 0;
+  if (a === b) return 100;
+  if (a.includes(b) || b.includes(a)) return 80;
+  const aa = [...new Set(a.split(/\s+/).filter(Boolean))], bb = [...new Set(b.split(/\s+/).filter(Boolean))];
+  const common = aa.filter((token) => bb.includes(token)).length;
+  return common ? 50 * common / Math.max(aa.length, bb.length) : 0;
+}
+function bestTitleMatch(items, query, titleOf) { return [...items].sort((a, b) => titleScore(titleOf(b), query) - titleScore(titleOf(a), query))[0] || null; }
+
 async function getStreams(tmdbId, mediaType, season, episode) {
   try {
     const movie = mediaType === "movie", candidates = await names(tmdbId, mediaType);
-    let results = [];
-    for (const q of candidates) { results = await search(q); if (results.length) break; }
-    const selected = results.find(x => x.movie === movie) || results[0];
+    let results = [], searchedTitle = "";
+    for (const q of candidates) { const rows = await search(q); if (rows.length) { results = rows; searchedTitle = q; break; } }
+    const typed = results.filter((x) => x.movie === movie);
+    const selected = bestTitleMatch(typed.length ? typed : results, searchedTitle, (x) => x.title);
     if (!selected) return [];
     const itemUrl = movie ? selected.href : await seriesEpisode(selected.href, episode);
     if (!itemUrl) return [];

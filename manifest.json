@@ -1,12 +1,12 @@
 {
   "name": "3arabi Nuvio Providers",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "scrapers": [
     {
       "id": "topcinema",
       "name": "Top Cinema",
       "description": "Arabic movies and series from Top Cinema, including episode discovery and Vidtube stream extraction.",
-      "version": "0.1.1",
+      "version": "0.1.2",
       "author": "mosa321211",
       "supportedTypes": [
         "movie",
@@ -29,7 +29,7 @@
       "id": "3isk",
       "name": "3isk",
       "description": "Arabic and Turkish series and movies from 3esk.onl, including episode pages, two-stage watch form submission, numbered embed probing, and packed player script decoding.",
-      "version": "0.1.1",
+      "version": "0.1.2",
       "author": "mosa321211",
       "supportedTypes": [
         "movie",
@@ -54,7 +54,7 @@
       "id": "5tv",
       "name": "5TV",
       "description": "Arabic movies and series from 5TV, including episode selection, watch/download server discovery, Dean Edwards unpacking, and candidate media validation.",
-      "version": "0.1.1",
+      "version": "0.1.2",
       "author": "mosa321211",
       "supportedTypes": [
         "movie",
@@ -78,7 +78,7 @@
       "id": "aflaam",
       "name": "Aflaam",
       "description": "Arabic, foreign, and Indian films and series from aflaam.com with episode selection and direct video source extraction.",
-      "version": "0.1.1",
+      "version": "0.1.2",
       "author": "mosa321211",
       "supportedTypes": [
         "movie",
@@ -101,7 +101,7 @@
       "id": "aia2tv",
       "name": "Asia2TV 2",
       "description": "Asian dramas and movies from Asia2TV with episode discovery, server traversal, packed player decoding, and direct/HLS extraction.",
-      "version": "0.1.1",
+      "version": "0.1.2",
       "author": "mosa321211",
       "supportedTypes": [
         "movie",
@@ -125,7 +125,7 @@
       "id": "akwam",
       "name": "Akwam",
       "description": "Arabic movies and series from Akwam with season and episode selection, direct download links, and watch source extraction.",
-      "version": "0.1.1",
+      "version": "0.1.2",
       "author": "mosa321211",
       "supportedTypes": [
         "movie",
@@ -148,7 +148,7 @@
       "id": "alooytv",
       "name": "AlooyTv",
       "description": "Arabic and Turkish series from AlooyTV with changing-domain resolution, episode selection, and direct source extraction.",
-      "version": "0.1.1",
+      "version": "0.1.2",
       "author": "mosa321211",
       "supportedTypes": [
         "movie",
@@ -171,7 +171,7 @@
       "id": "anim3rb",
       "name": "Anime3rb",
       "description": "Arabic anime from Anime3rb with Livewire search, episode discovery, Vid3rb player parsing, and non-premium source extraction.",
-      "version": "0.1.1",
+      "version": "0.1.2",
       "author": "mosa321211",
       "supportedTypes": [
         "movie",
@@ -194,7 +194,7 @@
       "id": "anime-phoenix",
       "name": "Anime Phoenix",
       "description": "Anime and anime movies from Anime Phoenix with signed API search, episode discovery, base64 server decoding, direct links, and Google Drive handling.",
-      "version": "0.1.1",
+      "version": "0.1.2",
       "author": "mosa321211",
       "supportedTypes": [
         "movie",
@@ -217,7 +217,7 @@
       "id": "anime4up",
       "name": "Anime4Up",
       "description": "Anime from Anime4Up with Cloudflare retry support, episode servers, Share4max mirrors, VnxPlayer HLS parsing, and subtitles.",
-      "version": "0.1.1",
+      "version": "0.1.2",
       "author": "mosa321211",
       "supportedTypes": [
         "movie",
